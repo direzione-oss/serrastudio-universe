@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SerraStudio Universe — Le Nostre App</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000008; overflow: hidden; font-family: 'Outfit', sans-serif; color: #fff; }
+canvas { display: block; cursor: grab; }
+canvas:active { cursor: grabbing; }
+
+#header {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  text-align: center; z-index: 100; pointer-events: none; user-select: none;
+}
+#header h1 {
+  font-size: clamp(1.2rem, 3vw, 2rem); font-weight: 800; letter-spacing: 4px;
+  background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #818cf8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 40px rgba(167,139,250,0.4);
+}
+#header p {
+  color: rgba(255,255,255,0.45); font-size: 0.8rem; margin-top: 6px; letter-spacing: 1px;
+}
+
+#labels-container {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 50;
+}
+.planet-label {
+  position: absolute; transform: translate(-50%, -50%) translateY(-40px);
+  background: rgba(0,0,15,0.75); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.5px; color: rgba(255,255,255,0.9); white-space: nowrap;
+  backdrop-filter: blur(10px); transition: opacity 0.3s;
+  pointer-events: none; opacity: 0;
+}
+.planet-label.visible { opacity: 1; }
+
+#tooltip {
+  position: fixed; background: rgba(0,0,20,0.92); border-radius: 14px;
+  padding: 14px 18px; pointer-events: none; z-index: 200; display: none;
+  backdrop-filter: blur(20px); max-width: 230px;
+  border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+#tooltip h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+#tooltip p { font-size: 0.73rem; color: rgba(255,255,255,0.6); line-height: 1.4; }
+#tooltip .badge {
+  display: inline-block; margin-top: 8px; padding: 2px 10px;
+  border-radius: 20px; font-size: 0.7rem; opacity: 0.8;
+  background: rgba(255,255,255,0.1);
+}
+
+#panel {
+  position: fixed; right: -420px; top: 50%; transform: translateY(-50%);
+  width: 370px; z-index: 300; transition: right 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  background: rgba(2,2,20,0.95); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px; padding: 32px; backdrop-filter: blur(30px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+#panel.open { right: 24px; }
+#close-btn {
+  position: absolute; top: 16px; right: 18px; background: rgba(255,255,255,0.08);
+  border: none; color: rgba(255,255,255,0.6); width: 30px; height: 30px;
+  border-radius: 50%; cursor: pointer; font-size: 1rem; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+#close-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+#panel-icon { font-size: 3.5rem; margin-bottom: 12px; }
+#panel-badge {
+  display: inline-block; padding: 3px 12px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 600; margin-bottom: 12px;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);
+}
+#panel-name { font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; }
+#panel-desc { font-size: 0.85rem; color: rgba(255,255,255,0.65); line-height: 1.6; margin-bottom: 24px; }
+#panel-btn {
+  display: block; width: 100%; padding: 14px; border-radius: 50px;
+  text-decoration: none; font-weight: 700; font-size: 0.9rem; color: #fff;
+  text-align: center; border: none; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 0.5px;
+}
+#panel-btn:hover { transform: scale(1.04); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+#hint {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.3); font-size: 0.72rem; letter-spacing: 1px;
+  text-align: center; pointer-events: none; user-select: none;
+}
+
+#loader {
+  position: fixed; inset: 0; background: #000008; z-index: 999;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  transition: opacity 0.8s ease;
+}
+#loader .logo { font-size: 2rem; font-weight: 800; letter-spacing: 4px;
+  background: linear-gradient(135deg, #fff, #c4b5fd); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+#loader .bar-wrap {
+  width: 200px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;
+}
+#loader .bar {
+  height: 100%; width: 0%; background: linear-gradient(90deg, #818cf8, #c4b5fd);
+  border-radius: 10px; transition: width 1s ease;
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="logo">✦ SERRASTUDIO ✦</div>
+  <div class="bar-wrap"><div class="bar" id="load-bar"></div></div>
+</div>
+
+<canvas id="c"></canvas>
+<div id="header">
+  <h1>✦ SERRASTUDIO UNIVERSE ✦</h1>
+  <p>Clicca su un pianeta per scoprire le nostre applicazioni</p>
+</div>
+<div id="labels-container"></div>
+<div id="tooltip">
+  <h3 id="tt-name"></h3>
+  <p id="tt-desc"></p>
+  <div class="price" id="tt-price"></div>
+</div>
+<div id="panel">
+  <button id="close-btn" onclick="closePanel()">✕</button>
+  <div id="panel-icon"></div>
+  <div id="panel-badge">🚀 App SerraStudio</div>
+  <div id="panel-name"></div>
+  <p id="panel-desc"></p>
+  <a id="panel-btn" href="#" target="_blank">🚀 Avvia l'App</a>
+</div>
+<div id="hint">🖱 Trascina per ruotare &nbsp;·&nbsp; Rotella per zoom &nbsp;·&nbsp; Clic per aprire</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── APP DATA ────────────────────────────────────────────────────────────────
+const APPS = [
+  {
+    name: 'RadarStudio', icon: '📡',
+    color: 0x7C3AED, glow: '#A78BFA',
+    desc: 'Dashboard avanzata per la gestione degli incarichi condominiali. Analisi finanziaria, cashflow e reportistica in tempo reale.',
+    url: 'https://radarstudio.onrender.com/landing',
+    size: 14, orbit: 65, speed: 0.0028, angle: 0.5, type: 'purple', tilt: 0.15
+  },
+  {
+    name: 'CantinaPro', icon: '🍷',
+    color: 0x991B1B, glow: '#F87171',
+    desc: 'Gestione completa della cantina vini. Inventario, etichette, lista ospiti e molto altro per il professionista del settore enologico.',
+    url: 'https://cantina-cloud-gian.streamlit.app',
+    size: 12, orbit: 100, speed: 0.002, angle: 1.8, type: 'red', tilt: 0.2
+  },
+  {
+    name: 'SpiceMaster Pro', icon: '🌶️',
+    color: 0xC2410C, glow: '#FB923C',
+    desc: 'Il tuo laboratorio digitale per spezie e botanicals. Crea mix personalizzati, gestisci l\'inventario e scopri abbinamenti perfetti.',
+    url: 'https://spicemaster-pro-k578raucpmop6zezcjhwv8.streamlit.app',
+    size: 16, orbit: 138, speed: 0.0014, angle: 3.2, type: 'orange', rings: true, tilt: 0.4
+  },
+  {
+    name: 'Commensali', icon: '🍽️',
+    color: 0x065F46, glow: '#34D399',
+    desc: 'Gestione intelligente degli ospiti e delle prenotazioni. Perfetto per ristoranti, eventi e cene private.',
+    url: 'https://commensali.streamlit.app',
+    size: 11, orbit: 175, speed: 0.001, angle: 4.8, type: 'teal', tilt: 0.1
+  },
+  {
+    name: 'Kandor', icon: '🔷',
+    color: 0x1E40AF, glow: '#60A5FA',
+    desc: 'Piattaforma avanzata per la sincronizzazione e gestione dei database. SQLite + Supabase in perfetta armonia.',
+    url: 'https://kandor.onrender.com/admin/login/?next=/admin/',
+    size: 13, orbit: 212, speed: 0.0007, angle: 2.1, type: 'blue', tilt: 0.3, moon: true
+  },
+  {
+    name: 'BNI Interviste', icon: '🤝',
+    color: 0x92400E, glow: '#FBBF24',
+    desc: 'Gestione delle interviste del 7° mese per i membri BNI. Tracciamento cicli, rinnovi e reportistica strutturata.',
+    url: 'https://singular-biscuit-0dd6eb.netlify.app/',
+    size: 11, orbit: 248, speed: 0.0005, angle: 5.5, type: 'gold', tilt: 0.18
+  }
+];
+
+// ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const scene = new THREE.Scene();
+const W = () => window.innerWidth, H = () => window.innerHeight;
+const camera = new THREE.PerspectiveCamera(55, W()/H(), 0.1, 8000);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(W(), H());
+
+// Camera spherical coords
+let sph = { theta: 0.4, phi: 1.15, r: 300 };
+let tgt = { ...sph };
+function applyCam() {
+  camera.position.set(
+    sph.r * Math.sin(sph.phi) * Math.sin(sph.theta),
+    sph.r * Math.cos(sph.phi),
+    sph.r * Math.sin(sph.phi) * Math.cos(sph.theta)
+  );
+  camera.lookAt(0, 0, 0);
+}
+applyCam();
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function makeCanvas(size, fn) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  fn(c.getContext('2d'), size);
+  return new THREE.CanvasTexture(c);
+}
+
+const PALETTES = {
+  purple: ['#1e0050','#4c1d95','#7c3aed','#a78bfa','#ede9fe'],
+  red:    ['#3b0000','#7f1d1d','#991b1b','#ef4444','#fecaca'],
+  orange: ['#431407','#9a3412','#c2410c','#f97316','#fed7aa'],
+  teal:   ['#022c22','#064e3b','#065f46','#10b981','#a7f3d0'],
+  blue:   ['#030b1f','#1e3a8a','#1d4ed8','#3b82f6','#bfdbfe'],
+  gold:   ['#27150a','#78350f','#b45309','#f59e0b','#fde68a'],
+};
+
+function planetTex(type) {
+  return makeCanvas(512, (ctx, s) => {
+    const pal = PALETTES[type];
+    const g = ctx.createLinearGradient(0, 0, s, s);
+    g.addColorStop(0, pal[0]); g.addColorStop(0.3, pal[1]);
+    g.addColorStop(0.55, pal[2]); g.addColorStop(0.75, pal[3]); g.addColorStop(1, pal[4]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+    // cloud bands
+    for (let i = 0; i < 18; i++) {
+      const y = Math.random()*s, h = Math.random()*35+8;
+      const bg = ctx.createLinearGradient(0, y, 0, y+h);
+      bg.addColorStop(0,'rgba(255,255,255,0)');
+      bg.addColorStop(0.5,`rgba(255,255,255,${Math.random()*0.12})`);
+      bg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = bg; ctx.fillRect(0, y, s, h);
+    }
+    // storm spots
+    for (let i = 0; i < 4; i++) {
+      const x=Math.random()*s, y=Math.random()*s, r=Math.random()*25+8;
+      const sg=ctx.createRadialGradient(x,y,0,x,y,r);
+      sg.addColorStop(0,'rgba(255,255,255,0.18)'); sg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=sg; ctx.beginPath(); ctx.ellipse(x,y,r,r*0.55,0,0,Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+function sunTex() {
+  return makeCanvas(512, (ctx, s) => {
+    const g=ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+    g.addColorStop(0,'#fffff0'); g.addColorStop(0.3,'#fff176');
+    g.addColorStop(0.6,'#ffd700'); g.addColorStop(0.85,'#ff8c00'); g.addColorStop(1,'#ff4500');
+    ctx.fillStyle=g; ctx.fillRect(0,0,s,s);
+    for(let i=0;i<300;i++){
+      const x=Math.random()*s,y=Math.random()*s,r=Math.random()*12+2;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,${160+Math.random()*70},0,${Math.random()*0.25})`; ctx.fill();
+    }
+  });
+}
+
+// ─── STARFIELD ───────────────────────────────────────────────────────────────
+(function(){
+  const geo=new THREE.BufferGeometry(), n=6000;
+  const pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const t=Math.random()*Math.PI*2, p=Math.acos(2*Math.random()-1), r=700+Math.random()*300;
+    pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.sin(p)*Math.sin(t); pos[i*3+2]=r*Math.cos(p);
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color:0xffffff,size:0.7,transparent:true,opacity:0.85,sizeAttenuation:true})));
+})();
+
+// Nebula clouds
+[[0x3300cc,600,1400],[0xff0033,400,1100],[0x0055ff,350,1000]].forEach(([col,n,sp])=>{
+  const geo=new THREE.BufferGeometry(), pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    pos[i*3]=(Math.random()-0.5)*sp; pos[i*3+1]=(Math.random()-0.5)*sp*0.25; pos[i*3+2]=(Math.random()-0.5)*sp;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color:col,size:2,transparent:true,opacity:0.12,sizeAttenuation:true})));
+});
+
+// ─── SUN ─────────────────────────────────────────────────────────────────────
+const sunGroup = new THREE.Group();
+const sunMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(24, 48, 48),
+  new THREE.MeshBasicMaterial({ map: sunTex() })
+);
+sunMesh.userData = { isSun: true };
+sunGroup.add(sunMesh);
+[1,2,3,4].forEach(i=>{
+  const g=new THREE.Mesh(new THREE.SphereGeometry(24+i*5,32,32),
+    new THREE.MeshBasicMaterial({color:0xFFD700,transparent:true,opacity:0.05/i,side:THREE.BackSide}));
+  sunGroup.add(g);
+});
+sunGroup.add(new THREE.PointLight(0xFFE066,2.5,800));
+scene.add(new THREE.AmbientLight(0x111133,0.6));
+scene.add(sunGroup);
+
+// ─── PLANETS ────────────────────────────────────────────────────────────────
+const planets=[], labelEls=[], angles=APPS.map(a=>a.angle);
+const labelsDiv=document.getElementById('labels-container');
+
+APPS.forEach((app,i)=>{
+  // Orbit ring
+  const pts=[]; for(let j=0;j<=128;j++){
+    const a=(j/128)*Math.PI*2;
+    pts.push(new THREE.Vector3(Math.cos(a)*app.orbit,0,Math.sin(a)*app.orbit));
+  }
+  const orbitGeo=new THREE.BufferGeometry().setFromPoints(pts);
+  scene.add(new THREE.Line(orbitGeo,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.06})));
+
+  // Planet mesh
+  const mesh=new THREE.Mesh(
+    new THREE.SphereGeometry(app.size,40,40),
+    new THREE.MeshPhongMaterial({map:planetTex(app.type),shininess:25,specular:new THREE.Color(0x222222)})
+  );
+  mesh.rotation.z=app.tilt;
+  mesh.userData={app,idx:i};
+
+  // Atmosphere
+  mesh.add(new THREE.Mesh(
+    new THREE.SphereGeometry(app.size*1.18,32,32),
+    new THREE.MeshBasicMaterial({color:app.color,transparent:true,opacity:0.12,side:THREE.BackSide})
+  ));
+
+  // Saturn-like rings
+  if(app.rings){
+    const rg=new THREE.RingGeometry(app.size*1.45,app.size*2.3,80);
+    const rm=new THREE.MeshBasicMaterial({color:0xFFB347,side:THREE.DoubleSide,transparent:true,opacity:0.45});
+    const ring=new THREE.Mesh(rg,rm); ring.rotation.x=Math.PI/3;
+    mesh.add(ring);
+  }
+
+  // Moon
+  if(app.moon){
+    const moon=new THREE.Mesh(
+      new THREE.SphereGeometry(app.size*0.28,16,16),
+      new THREE.MeshPhongMaterial({color:0xaaaaaa,shininess:10})
+    );
+    moon.userData={isMoon:true}; mesh.add(moon);
+  }
+
+  mesh.position.set(Math.cos(angles[i])*app.orbit, 0, Math.sin(angles[i])*app.orbit);
+  scene.add(mesh);
+  planets.push(mesh);
+
+  // HTML label
+  const el=document.createElement('div');
+  el.className='planet-label';
+  el.textContent=app.icon+' '+app.name;
+  el.style.borderColor=app.glow+'44';
+  el.style.color=app.glow;
+  labelsDiv.appendChild(el);
+  labelEls.push(el);
+});
+
+// ─── INTERACTION ────────────────────────────────────────────────────────────
+const ray=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+let isDrag=false, downPos={x:0,y:0}, downTime=0, hovered=null;
+const tt=document.getElementById('tooltip');
+
+canvas.addEventListener('mousedown',e=>{isDrag=false;downPos={x:e.clientX,y:e.clientY};downTime=Date.now();});
+canvas.addEventListener('mousemove',e=>{
+  mouse.x=(e.clientX/W())*2-1; mouse.y=-(e.clientY/H())*2+1;
+  const dx=e.clientX-downPos.x, dy=e.clientY-downPos.y;
+  if((dx*dx+dy*dy)>9){
+    isDrag=true;
+    tgt.theta-=dx*0.006; tgt.phi-=dy*0.006;
+    tgt.phi=Math.max(0.18,Math.min(Math.PI-0.18,tgt.phi));
+    downPos={x:e.clientX,y:e.clientY};
+  }
+  tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY-14)+'px';
+});
+canvas.addEventListener('mouseup',e=>{
+  if(!isDrag && Date.now()-downTime<350){
+    ray.setFromCamera(mouse,camera);
+    // Check sun first
+    const sunHit=ray.intersectObject(sunMesh);
+    if(sunHit.length){ window.open('https://www.serrastudio.it','_blank'); return; }
+    const h=ray.intersectObjects(planets);
+    if(h.length) openPanel(h[0].object.userData.app);
+  }
+});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  tgt.r=Math.max(60,Math.min(700,tgt.r+e.deltaY*0.35));
+},{passive:false});
+
+// Touch
+let lp=null;
+canvas.addEventListener('touchstart',e=>{lp={x:e.touches[0].clientX,y:e.touches[0].clientY};});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(lp){
+    tgt.theta-=(e.touches[0].clientX-lp.x)*0.008;
+    tgt.phi-=(e.touches[0].clientY-lp.y)*0.008;
+    tgt.phi=Math.max(0.18,Math.min(Math.PI-0.18,tgt.phi));
+    lp={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }
+},{passive:false});
+
+// ─── PANEL ───────────────────────────────────────────────────────────────────
+function openPanel(app){
+  document.getElementById('panel-icon').textContent=app.icon;
+  document.getElementById('panel-name').textContent=app.name;
+  document.getElementById('panel-name').style.color=app.glow;
+  document.getElementById('panel-desc').textContent=app.desc;
+  document.getElementById('panel-badge').textContent='🚀 App SerraStudio';
+  const btn=document.getElementById('panel-btn');
+  btn.href=app.url;
+  btn.style.background=`linear-gradient(135deg,${app.glow}99,${app.glow})`;
+  document.getElementById('panel').classList.add('open');
+}
+function closePanel(){ document.getElementById('panel').classList.remove('open'); }
+window.closePanel=closePanel;
+
+// ─── LABEL PROJECTION ────────────────────────────────────────────────────────
+function projectToScreen(pos){
+  const v=pos.clone().project(camera);
+  return {x:(v.x*0.5+0.5)*W(), y:(-v.y*0.5+0.5)*H(), z:v.z};
+}
+
+// ─── ANIMATION ───────────────────────────────────────────────────────────────
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  t+=0.016;
+
+  // smooth camera
+  sph.theta+=(tgt.theta-sph.theta)*0.09;
+  sph.phi+=(tgt.phi-sph.phi)*0.09;
+  sph.r+=(tgt.r-sph.r)*0.09;
+  applyCam();
+
+  // sun spin
+  sunMesh.rotation.y+=0.0015;
+
+  // planets orbit
+  APPS.forEach((app,i)=>{
+    angles[i]+=app.speed;
+    planets[i].position.set(Math.cos(angles[i])*app.orbit, 0, Math.sin(angles[i])*app.orbit);
+    planets[i].rotation.y+=0.005;
+    planets[i].children.forEach(ch=>{
+      if(ch.userData.isMoon){
+        ch.position.set(Math.cos(t*1.8)*app.size*2.8, 0, Math.sin(t*1.8)*app.size*2.8);
+      }
+    });
+
+    // label position
+    const sc=projectToScreen(planets[i].position);
+    if(sc.z<1){
+      labelEls[i].style.left=sc.x+'px';
+      labelEls[i].style.top=sc.y+'px';
+      labelEls[i].classList.add('visible');
+    } else {
+      labelEls[i].classList.remove('visible');
+    }
+  });
+
+  // hover
+  if(!isDrag){
+    ray.setFromCamera(mouse,camera);
+    // Check sun hover
+    const sunHits=ray.intersectObject(sunMesh);
+    const hits=ray.intersectObjects(planets);
+    if(sunHits.length && (!hits.length || sunHits[0].distance < hits[0].distance)){
+      canvas.style.cursor='pointer';
+      document.getElementById('tt-name').textContent='☀️ SerraStudio';
+      document.getElementById('tt-name').style.color='#FFD700';
+      document.getElementById('tt-desc').textContent='Visita il sito ufficiale di SerraStudio';
+      document.getElementById('tt-price').textContent='🌐 www.serrastudio.it';
+      tt.style.display='block';
+      if(hovered){ hovered.scale.set(1,1,1); hovered=null; }
+    } else if(hits.length){
+      const p=hits[0].object;
+      const app=p.userData.app;
+      canvas.style.cursor='pointer';
+      if(app){
+        document.getElementById('tt-name').textContent=app.icon+' '+app.name;
+        document.getElementById('tt-name').style.color=app.glow;
+        document.getElementById('tt-desc').textContent=app.desc.substring(0,90)+'…';
+        document.getElementById('tt-price').textContent='🚀 Clicca per aprire';
+        tt.style.display='block';
+      }
+      if(hovered!==p){ if(hovered) hovered.scale.set(1,1,1); hovered=p; }
+      p.scale.lerp(new THREE.Vector3(1.22,1.22,1.22),0.12);
+    } else {
+      canvas.style.cursor='grab';
+      tt.style.display='none';
+      if(hovered){ hovered.scale.lerp(new THREE.Vector3(1,1,1),0.12); if(hovered.scale.x<1.01){hovered.scale.set(1,1,1);hovered=null;} }
+    }
+  } else {
+    tt.style.display='none';
+    canvas.style.cursor='grabbing';
+  }
+
+  renderer.render(scene,camera);
+}
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  camera.aspect=W()/H(); camera.updateProjectionMatrix();
+  renderer.setSize(W(),H());
+});
+
+// ─── LOADER ──────────────────────────────────────────────────────────────────
+const bar=document.getElementById('load-bar');
+bar.style.width='100%';
+setTimeout(()=>{
+  const loader=document.getElementById('loader');
+  loader.style.opacity='0';
+  setTimeout(()=>loader.style.display='none',800);
+  animate();
+},1200);
+</script>
+</body>
+</html>
