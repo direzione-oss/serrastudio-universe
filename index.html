@@ -199,7 +199,7 @@ const APPS = [
     name: 'CondoCerta', icon: '🏢',
     color: 0x047857, glow: '#6EE7B7',
     desc: 'Piattaforma di verifica e certificazione per la gestione condominiale. Conformità, documenti e trasparenza per amministratori.',
-    url: 'http://condocerta.187.126.30.207.sslip.io',
+    url: 'https://condocerta.187.126.30.207.sslip.io',
     size: 12, orbit: 288, speed: 0.00025, angle: 1.4, type: 'emerald', tilt: 0.28
   },
   {
@@ -208,6 +208,20 @@ const APPS = [
     desc: 'L\'app mobile-first per condividere le tue vacanze ed organizzare incontri con amici e familiari scoprendo sovrapposizioni di date.',
     url: 'https://app099.vercel.app/',
     size: 13, orbit: 318, speed: 0.0002, angle: 2.5, type: 'indigo', tilt: 0.2, moon: true
+  },
+  {
+    name: 'CondoRate', icon: '📊',
+    color: 0x0284C7, glow: '#38BDF8',
+    desc: 'Analizzatore di bilanci condominiali basato su AI. Estrazione automatica delle spese da PDF e confronto pluriennale dell\'andamento.',
+    url: 'https://condorate.187.126.30.207.sslip.io',
+    size: 12, orbit: 348, speed: 0.00018, angle: 4.1, type: 'sky', tilt: 0.22
+  },
+  {
+    name: 'Lanzeni Marmi', icon: '🏛️',
+    color: 0xC5A059, glow: '#E5C158',
+    desc: 'CRM e Gestione Commesse per Lanzeni Mario S.r.l. Preventivi, rilievi cantiere, lavorazioni su misura e controllo marginalità.',
+    url: 'https://lanzeni.187.126.30.207.sslip.io',
+    size: 14, orbit: 378, speed: 0.00015, angle: 0.8, type: 'marble', rings: true, tilt: 0.3
   }
 ];
 
@@ -221,7 +235,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(W(), H());
 
 // Camera spherical coords
-let sph = { theta: 0.4, phi: 1.15, r: 300 };
+let sph = { theta: 0.4, phi: 1.15, r: 340 };
 let tgt = { ...sph };
 function applyCam() {
   camera.position.set(
@@ -252,11 +266,13 @@ const PALETTES = {
   cyan:   ['#042f2e','#0e4f4e','#0e7490','#06b6d4','#a5f3fc'],
   emerald:['#022c22','#065f46','#047857','#10b981','#a7f3d0'],
   indigo: ['#17124a','#312e81','#4f46e5','#818cf8','#e0e7ff'],
+  sky:    ['#082f49','#0369a1','#0284c7','#38bdf8','#e0f2fe'],
+  marble: ['#1a1a1a','#4a4a4a','#8c6d32','#c5a059','#f9f9f9'],
 };
 
 function planetTex(type) {
   return makeCanvas(512, (ctx, s) => {
-    const pal = PALETTES[type];
+    const pal = PALETTES[type] || PALETTES.gold;
     const g = ctx.createLinearGradient(0, 0, s, s);
     g.addColorStop(0, pal[0]); g.addColorStop(0.3, pal[1]);
     g.addColorStop(0.55, pal[2]); g.addColorStop(0.75, pal[3]); g.addColorStop(1, pal[4]);
@@ -421,7 +437,7 @@ canvas.addEventListener('mouseup',e=>{
 });
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
-  tgt.r=Math.max(60,Math.min(700,tgt.r+e.deltaY*0.35));
+  tgt.r=Math.max(60,Math.min(800,tgt.r+e.deltaY*0.35));
 },{passive:false});
 
 // Touch
