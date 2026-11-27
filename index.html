@@ -265,6 +265,20 @@ const APPS = [
     desc: 'Piattaforma collaborativa ANACI Bergamo: AI Legal RAG, SOS Condominio, Eventi e Locandine CFP, Voto QR Assemblea e 21 Convenzioni.',
     url: 'https://anaci.187.126.30.207.sslip.io',
     size: 14, orbit: 408, speed: 0.00013, angle: 3.1, type: 'emerald', moon: true, tilt: 0.24
+  },
+  {
+    name: 'Il Segreto dei Sapori', icon: '🧪',
+    color: 0xD97706, glow: '#F59E0B',
+    desc: 'FlavorEngine — Laboratorio Computazionale del Gusto. Simulatore sensoriale del palato, analisi degli equilibri gustativi, pairing molecolare e studio di ingredienti e tecniche di cottura.',
+    url: 'https://sapori.187.126.30.207.sslip.io',
+    size: 14, orbit: 438, speed: 0.00011, angle: 1.9, type: 'saffron', rings: true, tilt: 0.28
+  },
+  {
+    name: 'CRM DettoFatto', icon: '🏛️',
+    color: 0xF59E0B, glow: '#FBBF24',
+    desc: 'Centrale Operativa Studio Serra Amministrazioni Immobiliari. Gestione segnalazioni DettoFatto, smistamento Gmail AI, Collaboratori, Scadenze CPI, Assemblee e Maggiordomo Telegram.',
+    url: 'https://dettofatto.187.126.30.207.sslip.io/presentazione#pricing',
+    size: 15, orbit: 468, speed: 0.00010, angle: 4.5, type: 'gold', rings: true, moon: true, tilt: 0.25
   }
 ];
 
@@ -312,6 +326,7 @@ const PALETTES = {
   indigo: ['#1e1b4b','#3730a3','#4f46e5','#818cf8','#e0e7ff'],
   sky:    ['#0c4a6e','#0369a1','#0284c7','#38bdf8','#e0f2fe'],
   marble: ['#262626','#525252','#a37e3b','#d4af37','#ffffff'],
+  saffron:['#451a03','#b45309','#d97706','#f59e0b','#fef3c7'],
 };
 
 function planetTex(type) {
@@ -402,7 +417,7 @@ function focusPlanet(idx) {
   const targetAngle = Math.atan2(planets[idx].position.x, planets[idx].position.z);
   tgt.theta = targetAngle;
   tgt.phi = 1.18;
-  tgt.r = Math.max(150, Math.min(430, app.orbit + 115));
+  tgt.r = Math.max(150, Math.min(560, app.orbit + 115));
   openPanel(app, idx);
 }
 
